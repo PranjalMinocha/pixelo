@@ -17,6 +17,8 @@ PREGEN_DIR = BACKEND_DIR / "pregen_data"
 WORD_LIST_PATH = BASE_DIR / "word_list.txt"
 EMBED_STORE_PATH = BASE_DIR / "embed_store.npy"
 
+DRAWABLE_LIST_PATH = BASE_DIR / "drawable_words.txt"
+
 def load_data():
     print("Loading word list and embeddings...")
     with open(WORD_LIST_PATH, "r", encoding="utf-8") as f:
@@ -30,8 +32,25 @@ def load_data():
         min_len = min(len(words), embeddings.shape[1])
         words = words[:min_len]
         embeddings = embeddings[:, :min_len]
+    
+    # Load drawable words if available
+    drawable_indices = []
+    if os.path.exists(DRAWABLE_LIST_PATH):
+        print(f"Loading drawable words from {DRAWABLE_LIST_PATH}...")
+        with open(DRAWABLE_LIST_PATH, "r", encoding="utf-8") as f:
+            drawable_set = set(line.strip() for line in f if line.strip())
         
-    return words, embeddings
+        # Find indices of drawable words in the main list
+        for i, word in enumerate(words):
+            if word in drawable_set:
+                drawable_indices.append(i)
+        print(f"Found {len(drawable_indices)} drawable words in the main list.")
+    
+    if not drawable_indices:
+        print("Warning: No drawable words found or file missing. Falling back to all words.")
+        drawable_indices = list(range(len(words)))
+        
+    return words, embeddings, drawable_indices
 
 def get_similarity_ranks(target_index, embeddings, words):
     # Get target vector (384,)
@@ -112,10 +131,14 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=4, help="Batch size for image generation.")
     args = parser.parse_args()
     
-    words, embeddings = load_data()
+    words, embeddings, drawable_indices = load_data()
     
-    # Select random words
-    selected_indices = random.sample(range(len(words)), args.days)
+    # Select random words from drawable list
+    if len(drawable_indices) < args.days:
+        print(f"Warning: Not enough drawable words ({len(drawable_indices)}) for {args.days} days. Repetition may occur.")
+        selected_indices = [random.choice(drawable_indices) for _ in range(args.days)]
+    else:
+        selected_indices = random.sample(drawable_indices, args.days)
     
     pipe = setup_pipeline()
     
