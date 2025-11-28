@@ -4,7 +4,7 @@ from nltk.corpus import stopwords
 from langchain_huggingface import HuggingFaceEmbeddings
 from tqdm import tqdm
 
-word_list = top_n_list("en", 10000)
+word_list = top_n_list("en", 25000)
 stop_words = set(stopwords.words("english"))
 word_list = [w for w in word_list if w not in stop_words]
 
@@ -19,8 +19,8 @@ for word in tqdm(word_list):
 
 print("Embedding complete.\n")
 
-with open("Pixelo/word_list.txt", "w", encoding="utf-8") as file:
+with open("word_list.txt", "w", encoding="utf-8") as file:
     for word in word_list:
         file.write(word + "\n")
 
-np.save("Pixelo/embed_store.npy", embed_store)
+np.save("embed_store.npy", embed_store)

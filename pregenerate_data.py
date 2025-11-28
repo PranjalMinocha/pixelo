@@ -7,6 +7,8 @@ from datetime import date, timedelta
 from pathlib import Path
 import random
 from diffusers import AutoPipelineForText2Image
+from concurrent.futures import ThreadPoolExecutor
+import time
 
 # Setup paths
 BASE_DIR = Path(__file__).parent.resolve()
@@ -31,7 +33,7 @@ def load_data():
         
     return words, embeddings
 
-def get_similarity_ranks(target_index, embeddings):
+def get_similarity_ranks(target_index, embeddings, words):
     # Get target vector (384,)
     target_vector = embeddings[:, target_index]
     
@@ -65,57 +67,90 @@ def get_similarity_ranks(target_index, embeddings):
     return lookup
 
 def setup_pipeline():
-    print("Loading Stable Diffusion pipeline...")
+    print("Loading SDXL Turbo pipeline...")
     pipe = AutoPipelineForText2Image.from_pretrained(
-        "stabilityai/stable-diffusion-xl-base-1.0",
+        "stabilityai/sdxl-turbo",
         torch_dtype=torch.float16,
         variant="fp16",
         use_safetensors=True
     ).to("cuda")
     
-    pipe.load_lora_weights(
-        "artificialguybr/doodle-redmond-doodle-hand-drawing-style-lora-for-sd-xl",
-        weight_name="DoodleRedmond-Doodle-DoodleRedm.safetensors"
-    )
+    # Turbo doesn't need the LoRA as much if prompted well, and it's faster without extra weights
+    # pipe.load_lora_weights(...) 
     return pipe
+
+def generate_images_batch(pipe, prompts, output_paths):
+    # Generate images in batch
+    print(f"Generating batch of {len(prompts)} images with SDXL Turbo...")
+    # SDXL Turbo needs guidance_scale=0.0 and few steps (1-4)
+    images = pipe(prompts, guidance_scale=0.0, num_inference_steps=2).images
+    
+    for img, path in zip(images, output_paths):
+        img.save(path)
+
+def process_day(idx, target_date, words, embeddings):
+    # CPU-bound task: calculate lookup
+    target_word = words[idx]
+    date_str = str(target_date)
+    
+    # Create directory
+    day_dir = PREGEN_DIR / date_str
+    day_dir.mkdir(parents=True, exist_ok=True)
+    
+    print(f"Calculating lookup for {date_str}: '{target_word}'")
+    lookup = get_similarity_ranks(idx, embeddings, words)
+    
+    with open(day_dir / "lookup.json", "w", encoding="utf-8") as f:
+        json.dump(lookup, f)
+        
+    return day_dir / "image.png", target_word
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate Pixelo game data for the next N days.")
     parser.add_argument("--days", type=int, default=30, help="Number of days to generate.")
     parser.add_argument("--start_offset", type=int, default=0, help="Start generating from today + offset days.")
+    parser.add_argument("--batch_size", type=int, default=4, help="Batch size for image generation.")
     args = parser.parse_args()
     
     words, embeddings = load_data()
     
     # Select random words
-    # Use a fixed seed for reproducibility if needed, but random is good for variety
     selected_indices = random.sample(range(len(words)), args.days)
     
     pipe = setup_pipeline()
     
     today = date.today()
+    start_date = today + timedelta(days=args.start_offset)
+    print(f"Generating data for {args.days} days starting from {start_date}...")
     
-    print(f"Generating data for {args.days} days starting from {today + timedelta(days=args.start_offset)}...")
-    
+    # Prepare tasks
+    tasks = []
     for i, idx in enumerate(selected_indices):
-        target_date = today + timedelta(days=args.start_offset + i)
-        target_word = words[idx]
-        date_str = str(target_date)
+        target_date = start_date + timedelta(days=i)
+        tasks.append((idx, target_date))
+    
+    # We will process in chunks of batch_size
+    for i in range(0, len(tasks), args.batch_size):
+        batch_tasks = tasks[i : i + args.batch_size]
         
-        print(f"[{i+1}/{args.days}] {date_str}: '{target_word}'")
+        # 1. Run CPU tasks (lookup generation) in parallel
+        image_paths = []
+        prompts = []
         
-        # Create directory
-        day_dir = PREGEN_DIR / date_str
-        day_dir.mkdir(parents=True, exist_ok=True)
-        
-        # 1. Generate Lookup
-        lookup = get_similarity_ranks(idx, embeddings)
-        with open(day_dir / "lookup.json", "w", encoding="utf-8") as f:
-            json.dump(lookup, f)
+        with ThreadPoolExecutor() as executor:
+            futures = []
+            for idx, target_date in batch_tasks:
+                futures.append(executor.submit(process_day, idx, target_date, words, embeddings))
             
-        # 2. Generate Image
-        prompt = f"A playful doodle of a {target_word}, hand-drawn illustration, sketchy lines, slightly abstract, cartoon style, creative interpretation, DoodleRedm"
-        image = pipe(prompt, guidance_scale=7.5, num_inference_steps=30).images[0]
-        image.save(day_dir / "image.png")
+            for future in futures:
+                img_path, target_word = future.result()
+                image_paths.append(img_path)
+                # Improved prompt for Turbo
+                prompt = f"line art doodle of {target_word}, simple, minimal, thick black lines, white background, marker style, vector art, high quality"
+                prompts.append(prompt)
         
+        # 2. Run GPU task (image generation) in batch
+        if prompts:
+            generate_images_batch(pipe, prompts, image_paths)
+            
     print("Generation complete!")
