@@ -271,6 +271,9 @@ function App() {
                     ) : (
                         <p className="no-scores">No scores yet today.</p>
                     )}
+                    <div className="footer-shoutout">
+                        ❤️ inspired by <a href="https://contexto.me/" target="_blank" rel="noopener noreferrer">contexto</a> and <a href="https://skribbl.io/" target="_blank" rel="noopener noreferrer">skribbl.io</a>
+                    </div>
                 </div>
 
                 {/* Middle Column: Game */}
@@ -332,7 +335,7 @@ function App() {
                         </ul>
                     </div>
                 </div>
-            </div>
+            </div >
         </>
     );
 }

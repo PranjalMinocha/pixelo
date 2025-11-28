@@ -372,3 +372,22 @@ li {
         max-height: none;
     }
 }
+/* --- Footer Shoutout --- */
+.footer-shoutout {
+    margin-top: auto;
+    padding-top: 1rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+    opacity: 0.7;
+}
+
+.footer-shoutout a {
+    color: var(--text-muted);
+    text-decoration: underline;
+}
+
+.footer-shoutout a:hover {
+    color: var(--primary-color);
+}
+
