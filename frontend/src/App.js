@@ -24,7 +24,17 @@ function App() {
 
     const isInputDisabled = gameWon;
 
+    const [showStatsModal, setShowStatsModal] = useState(false);
+    const [stats, setStats] = useState({ played: 0, streak: 0, distribution: {} });
+    const [nextGameTime, setNextGameTime] = useState(null);
+    const [timeRemaining, setTimeRemaining] = useState('');
+
+
     useEffect(() => {
+        // Load stats from local storage
+        const savedStats = JSON.parse(localStorage.getItem('pixeloStats')) || { played: 0, streak: 0, distribution: {} };
+        setStats(savedStats);
+
         const loadInitialData = async () => {
             const timeoutId = setTimeout(() => {
                 setLoadingMessage('Waking up the server... this might take a minute (free tier hosting 😅)');
@@ -47,6 +57,16 @@ function App() {
                 setImageUrl(`${API_BASE_URL}${gameData.imageUrl}`);
                 setTotalWords(gameData.totalWords);
 
+                // Check if already played today
+                const lastCompleted = localStorage.getItem('pixelo_last_completed');
+                const todayStr = new Date().toDateString();
+
+                if (lastCompleted === todayStr) {
+                    setGameWon(true);
+                    setMessage({ text: 'You have already completed today\'s Pixelo!', type: 'info' });
+                    setCopyButtonText('Share Result');
+                }
+
                 if (leaderboardResponse.ok) {
                     const leaderboardData = await leaderboardResponse.json();
                     setLeaderboard(leaderboardData);
@@ -62,6 +82,27 @@ function App() {
 
         const savedUsername = localStorage.getItem('pixeloUsername');
         if (savedUsername) setUsername(savedUsername);
+
+        // Setup countdown to midnight
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setHours(24, 0, 0, 0);
+        setNextGameTime(tomorrow);
+
+        const timer = setInterval(() => {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setHours(24, 0, 0, 0);
+            const diff = tomorrow - now;
+
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            setTimeRemaining(`${hours}h ${minutes}m ${seconds}s`);
+        }, 1000);
+
+        return () => clearInterval(timer);
     }, []);
 
     const handleGuessSubmit = async (e) => {
@@ -113,6 +154,16 @@ function App() {
                     setGameWon(true);
                     setMessage({ text: `Congratulations! You guessed it in ${newGuessCount} tries!`, type: 'win' });
                     setShowUsernameModal(true);
+
+                    // Update Stats & Daily Limit
+                    const todayStr = new Date().toDateString();
+                    localStorage.setItem('pixelo_last_completed', todayStr);
+
+                    const newStats = { ...stats };
+                    newStats.played += 1;
+                    newStats.streak += 1; // Simple streak logic
+                    localStorage.setItem('pixeloStats', JSON.stringify(newStats));
+                    setStats(newStats);
                 }
             }
         } catch (error) {
@@ -124,7 +175,7 @@ function App() {
     };
 
     const handleShare = () => {
-        const shareText = `I completed today's Pixelo in ${guessCount} guesses. ✏️ Let's see if you can do it in less!\n${window.location.origin}`;
+        const shareText = `I completed today's Pixelo in ${guessCount} guesses. ✏️\nWin Streak: ${stats.streak}\nPlay now: ${window.location.origin}`;
         navigator.clipboard.writeText(shareText).then(() => {
             setCopyButtonText('Copied!');
             setTimeout(() => setCopyButtonText('Share'), 2000);
@@ -240,9 +291,15 @@ function App() {
                                     </div>
                                     <div className="game-interface">
                                         {gameWon ? (
-                                            <button type="button" className="share-button-main" onClick={handleShare}>
-                                                {copyButtonText}
-                                            </button>
+                                            <div className="game-won-container">
+                                                <div className="next-game-timer">
+                                                    <p>Next Pixelo in:</p>
+                                                    <div className="timer-display font-numeric">{timeRemaining}</div>
+                                                </div>
+                                                <button type="button" className="share-button-main" onClick={handleShare}>
+                                                    {copyButtonText}
+                                                </button>
+                                            </div>
                                         ) : (
                                             <form id="guess-form" onSubmit={handleGuessSubmit}>
                                                 <input type="text" id="guess-input" ref={inputRef} value={guess} onChange={(e) => setGuess(e.target.value)} placeholder="Type your guess..." autoComplete="off" required disabled={isInputDisabled} />

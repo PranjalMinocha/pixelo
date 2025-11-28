@@ -24,27 +24,24 @@ def activate_next_game():
     """
     logging.info("Starting daily game activation...")
 
-    try:
-        with open(STATE_FILE, 'r') as f:
-            state = json.load(f)
-        next_id = state.get("last_used_id", 0) + 1
-    except (FileNotFoundError, json.JSONDecodeError):
-        next_id = 1
-    logging.info(f"Activating pre-generated game ID: {next_id}")
+    logging.info("Starting daily game activation...")
 
-    source_dir = PREGEN_DIR / str(next_id)
+    current_date_str = str(date.today())
+    logging.info(f"Activating game for date: {current_date_str}")
+
+    source_dir = PREGEN_DIR / current_date_str
+    
     if not source_dir.exists():
-        logging.error(f"Pre-generated game directory not found: {source_dir}. Please run pregenerate_data.py.")
-        # Fallback to ID 1 if we run out of games, just to keep it running
-        logging.warning("Falling back to game ID 1.")
-        source_dir = PREGEN_DIR / "1"
+        logging.error(f"Pre-generated game directory not found for {current_date_str}. Checking for fallback...")
+        # Fallback to a 'default' or '1' folder if specific date is missing
+        source_dir = PREGEN_DIR / "1" 
         if not source_dir.exists():
-             logging.error("Game ID 1 also not found. Cannot activate game.")
+             logging.error("Fallback game data (ID 1) also not found. Cannot activate game.")
              return
+        logging.warning(f"Using fallback game data from {source_dir}")
 
     os.makedirs(LOOKUP_DIR, exist_ok=True)
     os.makedirs(IMAGE_DIR, exist_ok=True)
-    current_date_str = str(date.today())
 
     shutil.copy(source_dir / "lookup.json", LOOKUP_DIR / f"lookup_{current_date_str}.json")
     shutil.copy(source_dir / "image.png", IMAGE_DIR / f"img_{current_date_str}.png")
@@ -55,16 +52,20 @@ def activate_next_game():
         logging.info("Connecting to Vercel KV to reset leaderboard...")
         try:
             redis_client = from_url(redis_url)
+            # We don't strictly need to delete it if we want to keep history, 
+            # but for a daily reset it makes sense to ensure it's clean or just let it be.
+            # If we want to persist past leaderboards, we just don't delete.
+            # But the user said "daily game", implying new leaderboard each day.
+            # The key includes the date, so it's naturally unique per day.
+            # We only need to delete if we want to clear *today's* progress on restart.
+            # Let's keep the delete for safety in case of re-runs/testing.
             redis_client.delete(f"leaderboard:{current_date_str}")
-            logging.info("Leaderboard for today has been reset in Vercel KV.")
+            logging.info("Leaderboard for today has been reset/ensured clean in Vercel KV.")
         except Exception as e:
             logging.error(f"Failed to reset leaderboard: {e}")
     else:
         logging.warning("KV_URL environment variable not set. Skipping leaderboard reset.")
 
-    with open(STATE_FILE, 'w') as f:
-        json.dump({"last_used_id": next_id}, f)
-    logging.info(f"State updated. Last used ID is now {next_id}.")
     logging.info("Daily activation finished successfully.")
 
 if __name__ == "__main__":
