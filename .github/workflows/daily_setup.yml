@@ -1,0 +1,38 @@
+name: Daily Game Setup
+
+on:
+  schedule:
+    # Run at 00:00 UTC every day
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  daily-setup:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+        
+    - name: Install dependencies
+      run: |
+        pip install redis
+        
+    - name: Run Daily Setup
+      env:
+        KV_URL: ${{ secrets.KV_URL }}
+      run: |
+        python daily_setup.py
+        
+    - name: Commit and Push Changes
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add backend/lookup_files/ backend/static/images/
+        git commit -m "Daily game setup: Update lookup and image for $(date +'%Y-%m-%d')" || echo "No changes to commit"
+        git push

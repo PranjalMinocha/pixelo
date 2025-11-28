@@ -44,8 +44,9 @@ async def lifespan(app: FastAPI):
         lookup_path = LOOKUP_DIR / f"lookup_{current_date_str}.json"
         if not lookup_path.exists():
             print("Today's game not found. Running daily_setup.py...")
-            # Assuming we are running from root
-            subprocess.run(["python", "daily_setup.py"], check=True)
+            # Use absolute path to ensure it runs regardless of CWD
+            daily_setup_path = BACKEND_ROOT.parent / "daily_setup.py"
+            subprocess.run(["python", str(daily_setup_path)], check=True)
     except Exception as e:
         print(f"Error running daily setup: {e}")
     yield
