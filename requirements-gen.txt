@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+numpy
+torch
+torchvision
+torchaudio
+diffusers
+transformers
+accelerate
+pydantic
+peft
+safetensors
+redis

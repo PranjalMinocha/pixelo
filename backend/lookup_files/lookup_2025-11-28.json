@@ -1,0 +1,12 @@
+{
+    "campaign": 0,
+    "election": 1,
+    "vote": 2,
+    "politics": 3,
+    "candidate": 4,
+    "apple": 8781,
+    "banana": 9000,
+    "cherry": 9100,
+    "date": 9200,
+    "elderberry": 9300
+}
