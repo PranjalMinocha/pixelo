@@ -1,8 +1,6 @@
 # Pixelo
 
-**Pixelo** is a daily AI-powered drawing guessing game. It combines the fun of Pictionary with the challenge of semantic word guessing games like Semantle.
-
-![Pixelo Gameplay](https://via.placeholder.com/800x400?text=Pixelo+Gameplay+Screenshot)
+**Pixelo** is a daily AI-powered drawing guessing game. It combines the fun of Pictionary with the challenge of semantic word guessing games like Contexto.
 
 ## 🎮 How to Play
 
