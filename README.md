@@ -27,18 +27,18 @@ The project is designed to be fully automated and scalable.
 
 ```mermaid
 graph TD
-    User[User] -->|Visits| Frontend[Frontend (React on Vercel)]
-    Frontend -->|Submit Guess| Backend[Backend API (FastAPI on Render)]
+    User[User] -->|Visits| Frontend["Frontend (React on Vercel)"]
+    Frontend -->|Submit Guess| Backend["Backend API (FastAPI on Render)"]
     
     subgraph "Backend Services"
-        Backend -->|Get Similarity| Embeddings[Word Embeddings Model]
-        Backend -->|Fetch/Update Leaderboard| KV[Vercel KV (Redis)]
-        Backend -->|Serve Daily Image| Static[Static Files]
+        Backend -->|Get Similarity| Embeddings["Word Embeddings Model"]
+        Backend -->|Fetch/Update Leaderboard| KV["Vercel KV (Redis)"]
+        Backend -->|Serve Daily Image| Static["Static Files"]
     end
     
     subgraph "Daily Automation (GitHub Actions)"
-        DailyScript[daily_setup.py] -->|Selects Word & Image| PregenData[Pre-generated Data]
-        DailyScript -->|Commits & Pushes| Repo[GitHub Repository]
+        DailyScript["daily_setup.py"] -->|Selects Word & Image| PregenData["Pre-generated Data"]
+        DailyScript -->|Commits & Pushes| Repo["GitHub Repository"]
     end
     
     Repo -->|Triggers Deploy| Frontend
@@ -62,27 +62,3 @@ graph TD
 *   **Backend**: Python, FastAPI, NumPy, Scikit-learn
 *   **Data**: Pre-trained Word Embeddings (GloVe/Word2Vec)
 *   **Infrastructure**: Vercel (Frontend & KV), Render (Backend), GitHub Actions (Automation)
-
-## 🚀 Local Development
-
-1.  **Clone the repo**:
-    ```bash
-    git clone https://github.com/yourusername/pixelo.git
-    cd pixelo
-    ```
-
-2.  **Backend Setup**:
-    ```bash
-    cd backend
-    pip install -r requirements.txt
-    python -m uvicorn main:app --reload
-    ```
-
-3.  **Frontend Setup**:
-    ```bash
-    cd frontend
-    npm install
-    npm start
-    ```
-
-4.  **Visit**: `https://play-pixelo.vercel.app/`
