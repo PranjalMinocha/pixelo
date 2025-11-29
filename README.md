@@ -27,8 +27,8 @@ The project is designed to be fully automated and scalable.
 
 ```mermaid
 graph TD
-    User[User] -->|Visits| Frontend["Frontend (React on Vercel)"]
-    Frontend -->|Submit Guess| Backend["Backend API (FastAPI on Render)"]
+    User[User] -->|Visits| Frontend["Frontend<br>(React on Vercel)"]
+    Frontend -->|Submit Guess| Backend["Backend API<br>(FastAPI on Render)"]
     
     subgraph "Backend Services"
         Backend -->|Get Similarity| Embeddings["Word Embeddings Model"]
@@ -36,7 +36,7 @@ graph TD
         Backend -->|Serve Daily Image| Static["Static Files"]
     end
     
-    subgraph "Daily Automation (GitHub Actions)"
+    subgraph "Daily Automation"
         DailyScript["daily_setup.py"] -->|Selects Word & Image| PregenData["Pre-generated Data"]
         DailyScript -->|Commits & Pushes| Repo["GitHub Repository"]
     end
