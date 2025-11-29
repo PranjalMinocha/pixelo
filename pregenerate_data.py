@@ -168,8 +168,8 @@ if __name__ == "__main__":
             for future in futures:
                 img_path, target_word = future.result()
                 image_paths.append(img_path)
-                # Improved prompt for Turbo
-                prompt = f"line art doodle of {target_word}, simple, minimal, thick black lines, white background, marker style, vector art, high quality"
+                # "Bad Drawing" / Skribbl.io style prompt
+                prompt = f"a very bad drawing of a {target_word} in ms paint, thick black lines, white background, amateur, scribble, stick figure style, terrible art, pixelated lines"
                 prompts.append(prompt)
         
         # 2. Run GPU task (image generation) in batch
